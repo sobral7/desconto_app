@@ -1,27 +1,27 @@
-from src.controllers.pedido_controller import PedidoController
-from src.repositories.pedido_repository import PedidoRepository
-from src.services.pedido_service import PedidoService
-from src.database.connection import DatabaseConnection
-from src.models.pedido import Pedido
-from src.models.desconto import DescontoNormal, DescontoVIP, DescontoPremium
+from src.app.frameworks_database.memory_database import MemoryDatabase
+from src.app.adapters.repositories.memory_pedido_repository import MemoryPedidoRepository
+from src.app.use_cases.criar_pedido import CriarPedido
+from src.app.adapters.controllers.pedido_controller import PedidoController
 
 if __name__ == "__main__":
-    database = DatabaseConnection()
-    repo = PedidoRepository(database)
-    service = PedidoService(repo)
-    controller = PedidoController(service)
+    # 1. Base de dados em memória
+    database = MemoryDatabase()
 
-    pedido1 = Pedido("Cliente 1", DescontoNormal())
-    pedido1.valor_original = 100.0
+    # 2. Repositório concreto (Adapter) recebendo a BD
+    pedido_repository = MemoryPedidoRepository(database)
 
-    pedido2 = Pedido("Cliente 2", DescontoVIP())
-    pedido2.valor_original = 100.0
+    # 3. Caso de Uso recebendo o Repositório (via interface Gateway)
+    criar_pedido_use_case = CriarPedido(pedido_repository)
 
-    pedido3 = Pedido("Cliente 3", DescontoPremium())
-    pedido3.valor_original = 100.0
+    # 4. Controller recebendo o Caso de Uso
+    controller = PedidoController(criar_pedido_use_case)
 
-    controller.adicionar_pedido(pedido1)
-    controller.adicionar_pedido(pedido2)
-    controller.adicionar_pedido(pedido3)
+    # 5. Execução do fluxo via Controller
+    controller.criar_pedido("Cliente Normal", 100.0, "normal")
+    controller.criar_pedido("Cliente VIP", 100.0, "vip")
+    controller.criar_pedido("Cliente Premium", 100.0, "premium")
 
-    controller.processar_pedidos()
+    # 6. Exibição dos pedidos guardados
+    pedidos = controller.listar_pedidos()
+    for p in pedidos:
+        print(f"Cliente: {p.cliente} | Valor Original: {p.valor_original} | Valor Final: {p.valor_final()}")
